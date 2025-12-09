@@ -2,7 +2,7 @@ import string
 from model import Forecast, News, Portfolio, Quote, Recommendation, Report
 from typing import List 
 
-#àáñòğàêòíûé êëàññ
+#Ğ°Ğ±ÑÑ‚Ñ€Ğ°ĞºÑ‚Ğ½Ñ‹Ğ¹ ĞºĞ»Ğ°ÑÑ
 class BaseRepresentation:
     representation_id = None
 
@@ -12,7 +12,7 @@ class BaseRepresentation:
     def _update(self, data) -> None:
         pass
 
-#interface êëàññ, ğåàëèçóşùèé BaseRepresentation
+#interface ĞºĞ»Ğ°ÑÑ, Ñ€ĞµĞ°Ğ»Ğ¸Ğ·ÑƒÑÑ‰Ğ¸Ğ¹ BaseRepresentation
 class IRepresentation(BaseRepresentation):
     def displayData(self, data) -> None:
         pass
@@ -20,7 +20,7 @@ class IRepresentation(BaseRepresentation):
     def updateData(self, data) -> None:
         pass
 
-#àãğåãèğóåò ReportController
+#Ğ°Ğ³Ñ€ĞµĞ³Ğ¸Ñ€ÑƒĞµÑ‚ ReportController
 class IReportRepresentation(IRepresentation):
     def showReport(self, report: Report) -> None:
         pass
@@ -28,7 +28,7 @@ class IReportRepresentation(IRepresentation):
     def exportReport(self, report: Report, format: str) -> None:
         pass
 
-#àãğåãèğóåò ForecastController
+#Ğ°Ğ³Ñ€ĞµĞ³Ğ¸Ñ€ÑƒĞµÑ‚ ForecastController
 class IForecastRepresentation(IRepresentation):
     def showForecasts(self, forecasts: List[Forecast]) -> None:
         pass
@@ -36,7 +36,7 @@ class IForecastRepresentation(IRepresentation):
     def displayTrends(self, data: List) -> None:
         pass
 
-#àãğåãèğóåò RecommendationController
+#Ğ°Ğ³Ñ€ĞµĞ³Ğ¸Ñ€ÑƒĞµÑ‚ RecommendationController
 class IRecommendationRepresentation(IRepresentation):
     def displayRecommendations(self, recommendations: List[Recommendation]) -> None:
         pass
@@ -44,7 +44,7 @@ class IRecommendationRepresentation(IRepresentation):
     def highlightCriticals(self, recommendations: List[Recommendation]) -> None:
         pass
 
-#àãğåãèğóåò DashboardController
+#Ğ°Ğ³Ñ€ĞµĞ³Ğ¸Ñ€ÑƒĞµÑ‚ DashboardController
 class IDashboardRepresentation(IRepresentation):
     def showCurrentQuotes(self, quotes: List[Quote]) -> None:
         pass
@@ -52,7 +52,7 @@ class IDashboardRepresentation(IRepresentation):
     def showNews(self, news: List[News]) -> None:
         pass
 
-#àãğåãèğóåò PortfolioManagementController
+#Ğ°Ğ³Ñ€ĞµĞ³Ğ¸Ñ€ÑƒĞµÑ‚ PortfolioManagementController
 class IPortfolioRepresentation(IRepresentation):
     def showPortfolioContents(self, portfolio: Portfolio) -> None:
         pass

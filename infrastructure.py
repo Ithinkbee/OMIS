@@ -4,7 +4,7 @@ from control import AnalysisController, DashboardController, ForecastController,
 from representation import IDashboardRepresentation, IForecastRepresentation, IPortfolioRepresentation, IRecommendationRepresentation, IReportRepresentation
 
 #injector
-#ñîçäà¸ò Repository 
+#ÑĞ¾Ğ·Ğ´Ğ°Ñ‘Ñ‚ Repository 
 class DependencyContainer:
     def registerInterface(self, class_, realization) -> None:
         pass

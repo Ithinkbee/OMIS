@@ -6,7 +6,7 @@ from model import Repository
 from representation import IRepresentation
 
 #main
-#èñïîëüçóåò âñå èìåşùèåñÿ êîíòğîëëåğû
+#Ğ¸ÑĞ¿Ğ¾Ğ»ÑŒĞ·ÑƒĞµÑ‚ Ğ²ÑĞµ Ğ¸Ğ¼ĞµÑÑ‰Ğ¸ĞµÑÑ ĞºĞ¾Ğ½Ñ‚Ñ€Ğ¾Ğ»Ğ»ĞµÑ€Ñ‹
 class Application:
     def main(self, args: List[str]) -> None:
         pass
@@ -19,7 +19,7 @@ class IController:
     pass
 
 #injector
-#íàñòğàèâàåò DependencyContainer
+#Ğ½Ğ°ÑÑ‚Ñ€Ğ°Ğ¸Ğ²Ğ°ĞµÑ‚ DependencyContainer
 class SystemConfigurator:
     def configureDependencies(self, container: DependencyContainer) -> None:
         pass

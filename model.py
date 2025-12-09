@@ -1,9 +1,9 @@
 import string
 from typing import List 
 
-#àáñòðàêòíûé êëàññ
+#Ð°Ð±ÑÑ‚Ñ€Ð°ÐºÑ‚Ð½Ñ‹Ð¹ ÐºÐ»Ð°ÑÑ
 class User:
-    user_id = None #óíèêàëüíî ñðåäè äðóãèõ òàêèõ æå îáúåêòîâ #String
+    user_id = None #ÑƒÐ½Ð¸ÐºÐ°Ð»ÑŒÐ½Ð¾ ÑÑ€ÐµÐ´Ð¸ Ð´Ñ€ÑƒÐ³Ð¸Ñ… Ñ‚Ð°ÐºÐ¸Ñ… Ð¶Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð² #String
     login = None #String
 
 class PrivateInvestor(User):
@@ -14,7 +14,7 @@ class FinancialAnalyst(User):
     def __init__(self):
         pass
     
-#ìîæåò áûòü òîëüêî îäèí
+#Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¾Ð´Ð¸Ð½
 class FundManager(User):
     def __init__(self):
         pass
@@ -28,7 +28,7 @@ class AnalysisContext:
         pass
 
 class Asset:
-    asset_id = None #óíèêàëüíî ñðåäè äðóãèõ òàêèõ æå îáúåêòîâ
+    asset_id = None #ÑƒÐ½Ð¸ÐºÐ°Ð»ÑŒÐ½Ð¾ ÑÑ€ÐµÐ´Ð¸ Ð´Ñ€ÑƒÐ³Ð¸Ñ… Ñ‚Ð°ÐºÐ¸Ñ… Ð¶Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð²
     ticker = None
     title = None
     asset_type = None
@@ -36,7 +36,7 @@ class Asset:
     def __init__(self):
         pass
 
-#àáñòðàêòíûé êëàññ
+#Ð°Ð±ÑÑ‚Ñ€Ð°ÐºÑ‚Ð½Ñ‹Ð¹ ÐºÐ»Ð°ÑÑ
 class Repository:
     def getObject(self, id):
         pass
@@ -48,7 +48,7 @@ class Repository:
         pass
 
 class Quote:
-    qote_id = None #óíèêàëüíî ñðåäè äðóãèõ òàêèõ æå îáúåêòîâ
+    qote_id = None #ÑƒÐ½Ð¸ÐºÐ°Ð»ÑŒÐ½Ð¾ ÑÑ€ÐµÐ´Ð¸ Ð´Ñ€ÑƒÐ³Ð¸Ñ… Ñ‚Ð°ÐºÐ¸Ñ… Ð¶Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð²
     time = None
     opening_price = None
     closing_price = None
@@ -60,7 +60,7 @@ class Quote:
         pass
 
 class News:
-    news_id = None #óíèêàëüíî ñðåäè äðóãèõ òàêèõ æå îáúåêòîâ
+    news_id = None #ÑƒÐ½Ð¸ÐºÐ°Ð»ÑŒÐ½Ð¾ ÑÑ€ÐµÐ´Ð¸ Ð´Ñ€ÑƒÐ³Ð¸Ñ… Ñ‚Ð°ÐºÐ¸Ñ… Ð¶Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð²
     source = None
     heading = None
     text = None
@@ -70,7 +70,7 @@ class News:
     def __init__(self):
         pass
 
-#ìîæåò áûòü òîëüêî îäèí
+#Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¾Ð´Ð¸Ð½
 class DataRepository(Repository):
     def getQuotes(self, asset_id, period) -> List[Quote]:
         pass
@@ -79,7 +79,7 @@ class DataRepository(Repository):
         pass
 
 class Report:
-    report_id = None #óíèêàëüíî ñðåäè äðóãèõ òàêèõ æå îáúåêòîâ
+    report_id = None #ÑƒÐ½Ð¸ÐºÐ°Ð»ÑŒÐ½Ð¾ ÑÑ€ÐµÐ´Ð¸ Ð´Ñ€ÑƒÐ³Ð¸Ñ… Ñ‚Ð°ÐºÐ¸Ñ… Ð¶Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð²
     title = None
     period = None
     content = None
@@ -87,7 +87,7 @@ class Report:
     def __init__(self):
         pass
 
-#ìîæåò áûòü òîëüêî îäèí
+#Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¾Ð´Ð¸Ð½
 class ReportRepository(Repository):
     def getReport(self, report_id) -> Report:
         pass
@@ -96,7 +96,7 @@ class ReportRepository(Repository):
         pass
 
 class Forecast:
-    forecast_id = None #óíèêàëüíî ñðåäè äðóãèõ òàêèõ æå îáúåêòîâ
+    forecast_id = None #ÑƒÐ½Ð¸ÐºÐ°Ð»ÑŒÐ½Ð¾ ÑÑ€ÐµÐ´Ð¸ Ð´Ñ€ÑƒÐ³Ð¸Ñ… Ñ‚Ð°ÐºÐ¸Ñ… Ð¶Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð²
     creation_time = None
     forecast_horizon = None
     target_value = None
@@ -105,7 +105,7 @@ class Forecast:
     def __init__(self):
         pass
 
-#ìîæåò áûòü òîëüêî îäèí
+#Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¾Ð´Ð¸Ð½
 class ForecastRepository(Repository):
     def getForecasts(self, context) -> List[Forecast]:
         pass
@@ -114,8 +114,8 @@ class ForecastRepository(Repository):
         pass
 
 class Recommendation:
-    recommendation_id = None #óíèêàëüíî ñðåäè äðóãèõ òàêèõ æå îáúåêòîâ
-    recommendation_type = {buy, sell, hold} #îäíî èç ýòèõ çíà÷åíèé
+    recommendation_id = None #ÑƒÐ½Ð¸ÐºÐ°Ð»ÑŒÐ½Ð¾ ÑÑ€ÐµÐ´Ð¸ Ð´Ñ€ÑƒÐ³Ð¸Ñ… Ñ‚Ð°ÐºÐ¸Ñ… Ð¶Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð²
+    recommendation_type = {buy, sell, hold} #Ð¾Ð´Ð½Ð¾ Ð¸Ð· ÑÑ‚Ð¸Ñ… Ð·Ð½Ð°Ñ‡ÐµÐ½Ð¸Ð¹
     target_price = None
     stop_Loss = None
     status = None
@@ -123,7 +123,7 @@ class Recommendation:
     def __init__(self):
         pass
 
-#ìîæåò áûòü òîëüêî îäèí
+#Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¾Ð´Ð¸Ð½
 class RecommendationRepository(Repository):
     def getRecommendations(self, context) -> List[Recommendation]:
         pass
@@ -131,9 +131,9 @@ class RecommendationRepository(Repository):
     def saveRecommendation(self, recommendation) -> None:
         pass
 
-#ñóùåñòâóåò òîëüêî âíóòðè Portfolio
+#ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÐµÑ‚ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð²Ð½ÑƒÑ‚Ñ€Ð¸ Portfolio
 class Position:
-    position_id = None #óíèêàëüíî ñðåäè äðóãèõ òàêèõ æå îáúåêòîâ
+    position_id = None #ÑƒÐ½Ð¸ÐºÐ°Ð»ÑŒÐ½Ð¾ ÑÑ€ÐµÐ´Ð¸ Ð´Ñ€ÑƒÐ³Ð¸Ñ… Ñ‚Ð°ÐºÐ¸Ñ… Ð¶Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð²
     quantity = None
     average_purchase_price = None
 
@@ -141,14 +141,14 @@ class Position:
         pass
 
 class Portfolio:
-    portfolio_id = None #óíèêàëüíî ñðåäè äðóãèõ òàêèõ æå îáúåêòîâ
+    portfolio_id = None #ÑƒÐ½Ð¸ÐºÐ°Ð»ÑŒÐ½Ð¾ ÑÑ€ÐµÐ´Ð¸ Ð´Ñ€ÑƒÐ³Ð¸Ñ… Ñ‚Ð°ÐºÐ¸Ñ… Ð¶Ðµ Ð¾Ð±ÑŠÐµÐºÑ‚Ð¾Ð²
     title = None
     positions = None #List[Position]
 
     def __init__(self):
         pass
 
-#ìîæåò áûòü òîëüêî îäèí
+#Ð¼Ð¾Ð¶ÐµÑ‚ Ð±Ñ‹Ñ‚ÑŒ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð¾Ð´Ð¸Ð½
 class PortfolioRepository(Repository):
     def getPortfolio(self, user_id) -> Portfolio:
         pass

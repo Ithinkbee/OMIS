@@ -2,7 +2,7 @@ import string
 from model import Forecast, Portfolio, Recommendation, Report
 from typing import List
 
-#çàâèñèò îò ForecastRepository
+#Ð·Ð°Ð²Ð¸ÑÐ¸Ñ‚ Ð¾Ñ‚ ForecastRepository
 class ForecastController:
     def createForecast(self, context) -> Forecast:
         pass
@@ -10,7 +10,7 @@ class ForecastController:
     def getForecasts(self) -> List[Forecast]:
         pass
 
-#çàâèñèò îò ReportRepository
+#Ð·Ð°Ð²Ð¸ÑÐ¸Ñ‚ Ð¾Ñ‚ ReportRepository
 class ReportController:
     def generateReport(self, period: str) -> Report:
         pass
@@ -22,24 +22,24 @@ class IAnalysisStrategy:
     def analyse(self, data: List) -> List:
         pass
 
-#òåõíè÷åñêèé àíàëèç
+#Ñ‚ÐµÑ…Ð½Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ Ð°Ð½Ð°Ð»Ð¸Ð·
 class TechnicalAnalysisStrategy(IAnalysisStrategy):
     pass
 
-#àíàëèç íàñòðîåíèé
+#Ð°Ð½Ð°Ð»Ð¸Ð· Ð½Ð°ÑÑ‚Ñ€Ð¾ÐµÐ½Ð¸Ð¹
 class SentimentAnalysisStrategy(IAnalysisStrategy):
     pass
 
-#çàâèñèò îò DataRepository
+#Ð·Ð°Ð²Ð¸ÑÐ¸Ñ‚ Ð¾Ñ‚ DataRepository
 class AnalysisController:
-    #èñïîëüçóåòñÿ ñòðàòåãèÿ àíàëèçà
+    #Ð¸ÑÐ¿Ð¾Ð»ÑŒÐ·ÑƒÐµÑ‚ÑÑ ÑÑ‚Ñ€Ð°Ñ‚ÐµÐ³Ð¸Ñ Ð°Ð½Ð°Ð»Ð¸Ð·Ð°
     def analyseData(self) -> None:
         pass
 
     def getAnalytics(self) -> List:
         pass
 
-#çàâèñèò îò DataRepository
+#Ð·Ð°Ð²Ð¸ÑÐ¸Ñ‚ Ð¾Ñ‚ DataRepository
 class DashboardController:
     def startMonitoring(self) -> None:
         pass
@@ -47,7 +47,7 @@ class DashboardController:
     def getDashboardData(self) -> List:
         pass
 
-#çàâèñèò îò RecommendationRepository
+#Ð·Ð°Ð²Ð¸ÑÐ¸Ñ‚ Ð¾Ñ‚ RecommendationRepository
 class RecommendationController:
     def generateRecommendations(self, context) -> List[Recommendation]:
         pass
@@ -68,7 +68,7 @@ class BuyAssetCommand(ICommand):
 class SellAssetCommand(ICommand):
     pass
 
-#çàâèñèò îò PortfolioRepository
+#Ð·Ð°Ð²Ð¸ÑÐ¸Ñ‚ Ð¾Ñ‚ PortfolioRepository
 class PortfolioManagementController:
     def createPortfolio(self, title) -> Portfolio:
         pass
