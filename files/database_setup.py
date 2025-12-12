@@ -35,7 +35,13 @@ class DatabaseSetup:
                 asset_id TEXT, portfolio_id TEXT)""",
             """CREATE TABLE IF NOT EXISTS bots (
                 bot_id TEXT PRIMARY KEY, name TEXT, strategy TEXT, assets TEXT,
-                stop_loss REAL, take_profit REAL, max_pos REAL, user_id TEXT)"""
+                stop_loss REAL, take_profit REAL, max_pos REAL, user_id TEXT)""",
+            """CREATE TABLE IF NOT EXISTS risks (
+                risk_id TEXT PRIMARY KEY, risk_type TEXT, name TEXT, probability REAL)""",
+            """CREATE TABLE IF NOT EXISTS rules (
+                rule_id TEXT PRIMARY KEY, name TEXT, condition TEXT, action TEXT, weight REAL)""",
+            """CREATE TABLE IF NOT EXISTS analysis_models (
+                model_id TEXT PRIMARY KEY, name TEXT, parameters TEXT, status TEXT, accuracy REAL)"""
         ]
 
         for query in tables:
@@ -66,6 +72,18 @@ class DatabaseSetup:
         ]
         cursor.executemany("INSERT OR IGNORE INTO users VALUES (?,?,?,?)", users)
 
+        risks = [
+            (str(uuid.uuid4()), "Market", "High Volatility", 0.7),
+            (str(uuid.uuid4()), "Operational", "Exchange Outage", 0.05)
+        ]
+        cursor.executemany("INSERT INTO risks VALUES (?,?,?,?)", risks)
+
+        rules = [
+            (str(uuid.uuid4()), "StopLossRule", "price < sl", "SELL", 0.9),
+            (str(uuid.uuid4()), "TrendFollow", "price > ma50", "BUY", 0.6)
+        ]
+        cursor.executemany("INSERT INTO rules VALUES (?,?,?,?,?)", rules)
+
         for asset in assets:
             price = 150.0
             if asset[1] == "BTC": price = 30000.0
@@ -80,7 +98,7 @@ class DatabaseSetup:
     def reset_db(self):
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
-        tables = ["users", "assets", "quotes", "news", "forecasts", "recommendations", "portfolios", "positions", "bots"]
+        tables = ["users", "assets", "quotes", "news", "forecasts", "recommendations", "portfolios", "positions", "bots", "risks", "rules", "analysis_models"]
         for t in tables:
             cursor.execute(f"DROP TABLE IF EXISTS {t}")
         conn.commit()

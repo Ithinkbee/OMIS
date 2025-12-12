@@ -1,18 +1,16 @@
 import sqlite3
 from typing import List
 
-from infrastructure import DependencyContainer, ControllerFactory, RepresentationFacroty
-from model import Repository
+from infrastructure import DependencyContainer, ControllerFactory, RepresentationFactory
+from model import Repository, DataRepository, UserRepository
 from representation import MainWindow
 from database_setup import DatabaseSetup
-
-class IController: pass
 
 class SystemConfigurator:
     def __init__(self, db_name="finance_platform.db"):
         self.db_name = db_name
 
-    def configureDependencies(self, container: DependencyContainer, factory: ControllerFactory, rep_factory: RepresentationFacroty) -> dict:
+    def configureDependencies(self, container: DependencyContainer, factory: ControllerFactory, rep_factory: RepresentationFactory) -> dict:
         ctrls = {
             'auth': factory.createAuthController(),
             'dash': factory.createDashboardController(),
@@ -20,7 +18,8 @@ class SystemConfigurator:
             'rec': factory.createRecommendationController(),
             'rep': factory.createReportController(),
             'port': factory.createPortfolioManagementController(),
-            'bot': factory.createAutoTradingController()
+            'bot': factory.createAutoTradingController(),
+            'analysis': factory.createAnalysisController()
         }
         
         for name, instance in ctrls.items():
@@ -39,18 +38,8 @@ class SystemConfigurator:
             
         return ctrls, reps
 
-    def createRepositories(self, conn) -> List[Repository]:
-        from model import DataRepository, UserRepository
-        return [DataRepository(conn), UserRepository(conn)]
-
-    def createControllers(self, repositories: List) -> List[IController]:
-        return []
-
-    def createRepresentations(self, controllers: List) -> List[object]:
-        return []
-
     def linkComponents(self) -> None:
-        print("System linked.")
+        print("System linked and ready.")
 
 class Application:
     def __init__(self) -> None:
@@ -64,7 +53,7 @@ class Application:
         conn = sqlite3.connect("finance_platform.db", check_same_thread=False)
         
         ctrl_factory = ControllerFactory(conn)
-        rep_factory = RepresentationFacroty()
+        rep_factory = RepresentationFactory()
         
         ctrls, reps = self.configurator.configureDependencies(self.container, ctrl_factory, rep_factory)
         self.configurator.linkComponents()

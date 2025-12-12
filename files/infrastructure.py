@@ -1,4 +1,3 @@
-from pyclbr import Class
 from typing import List, Any, Type
 from control import *
 from representation import *
@@ -8,21 +7,15 @@ class DependencyContainer:
     def __init__(self):
         self._registry = {}
 
-    def registerInterface(self, class_, instance) -> None:
-        self._registry[class_] = instance
+    def registerInterface(self, class_name: str, instance: Any) -> None:
+        self._registry[class_name] = instance
 
-    def allowInterface(self, class_) -> object:
-        if class_ in self._registry:
-            return self._registry[class_]
-        return None
+    def allowInterface(self, class_name: str) -> object:
+        if class_name in self._registry:
+            return self._registry[class_name]
+        raise ValueError(f"Interface {class_name} not registered in container.")
 
-    def createController(self, type_cls) -> Any:
-        return self.allowInterface(type_cls)
-
-    def createRepresentation(self, type_cls) -> Any:
-        return self.allowInterface(type_cls)
-
-class RepresentationFacroty:
+class RepresentationFactory:
     def createDashboardRepresentation(self, controller: DashboardController) -> IDashboardRepresentation:
         return IDashboardRepresentation(controller)
 
@@ -52,10 +45,10 @@ class ControllerFactory:
         return AnalysisController(DataRepository(self.conn), [TechnicalAnalysisStrategy(), SentimentAnalysisStrategy()])
 
     def createForecastController(self) -> ForecastController:
-        return ForecastController(ForecastRepository(self.conn), DataRepository(self.conn))
+        return ForecastController(ForecastRepository(self.conn), DataRepository(self.conn), ModelRepository(self.conn))
 
     def createRecommendationController(self) -> RecommendationController:
-        return RecommendationController(RecommendationRepository(self.conn))
+        return RecommendationController(RecommendationRepository(self.conn), RiskRepository(self.conn), RuleRepository(self.conn))
 
     def createReportController(self) -> ReportController:
         return ReportController(ReportRepository(self.conn), PortfolioRepository(self.conn), DataRepository(self.conn))
@@ -64,4 +57,4 @@ class ControllerFactory:
         return AuthController(UserRepository(self.conn))
     
     def createAutoTradingController(self) -> AutoTradingController:
-        return AutoTradingController(BotRepository(self.conn))
+        return AutoTradingController(BotRepository(self.conn), DataRepository(self.conn))

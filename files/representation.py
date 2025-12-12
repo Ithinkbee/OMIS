@@ -1,249 +1,421 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
-from model import Forecast, News, Portfolio, Quote, Recommendation, Report
+from tkinter import ttk, messagebox, simpledialog
+from model import Forecast, News, Portfolio, Quote, Recommendation, Report, AnalysisContext
 from typing import List 
-import random
+from control import BuyAssetCommand, SellAssetCommand
 
-class ChartWidget(tk.Canvas):
-    def __init__(self, parent, data, width=300, height=150, color="blue"):
-        super().__init__(parent, width=width, height=height, bg="white")
+class ModernChartWidget(tk.Canvas):
+    def __init__(self, parent, data, width=500, height=250, title="Price History"):
+        super().__init__(parent, width=width, height=height, bg="white", highlightthickness=0)
         self.data = data
-        self.line_color = color
+        self.title = title
         self.draw()
     
     def draw(self):
         self.delete("all")
-        if not self.data:
-            self.create_text(int(self['width'])/2, int(self['height'])/2, text="No Data")
-            return
         w, h = int(self['width']), int(self['height'])
+        pad = 30
+        
+        self.create_text(w/2, 15, text=self.title, font=("Arial", 10, "bold"), fill="#333")
+        self.create_line(pad, h-pad, w-pad, h-pad, fill="#ccc")
+        self.create_line(pad, pad, pad, h-pad, fill="#ccc")
+        
+        if not self.data or len(self.data) < 2:
+            self.create_text(w/2, h/2, text="No Data Available", fill="#999")
+            return
+            
         max_val, min_val = max(self.data), min(self.data)
-        diff = max_val - min_val if max_val != min_val else 1
+        rng = max_val - min_val if max_val != min_val else 1
         
         points = []
-        step = w / (len(self.data) - 1) if len(self.data) > 1 else 0
-        for i, val in enumerate(self.data):
-            x = i * step
-            y = h - ((val - min_val) / diff * (h - 20)) - 10
-            points.append(x); points.append(y)
+        step = (w - 2*pad) / (len(self.data) - 1)
         
+        for i, val in enumerate(self.data):
+            x = pad + i * step
+            y = (h - pad) - ((val - min_val) / rng * (h - 2*pad))
+            points.append(x)
+            points.append(y)
+            
+        color = "#2ecc71" if self.data[-1] >= self.data[0] else "#e74c3c"
         if len(points) >= 4:
-            self.create_line(points, fill=self.line_color, width=2)
+            self.create_line(points, fill=color, width=2, smooth=True)
+            
+        self.create_text(pad-15, pad, text=f"{max_val:.1f}", font=("Arial", 8), fill="#555")
+        self.create_text(pad-15, h-pad, text=f"{min_val:.1f}", font=("Arial", 8), fill="#555")
 
 class BaseRepresentation:
-    representation_id = None
     def _display(self, data) -> None: 
-        print(f"DISPLAY: {data}")
+        print(f"[UI LOG] Displaying data: {data}")
     def _update(self, data) -> None: 
-        print(f"UPDATE: {data}")
+        print(f"[UI LOG] Updating data: {data}")
 
 class IRepresentation(BaseRepresentation):
     def __init__(self, controller):
         self.controller = controller
-        self.view_component = None
-
-    def set_view(self, component):
-        self.view_component = component
-
-    def displayData(self, data) -> None: 
-        self._display(data)
-    def updateData(self, data) -> None: 
-        self._update(data)
 
 class IReportRepresentation(IRepresentation):
     def showReport(self, report: Report) -> None:
-        if self.view_component:
-            self.view_component.config(text=report.content)
         messagebox.showinfo(report.title, f"{report.content}\n\nMetrics: {report.metrics}")
-
     def exportReport(self, report: Report, format: str) -> None:
-        messagebox.showinfo("Export", f"Report {report.title} exported to {format}")
+        messagebox.showinfo("Export", f"Report exported to {format}")
 
 class IForecastRepresentation(IRepresentation):
-    def showForecasts(self, forecasts: List[Forecast]) -> None:
-        msg = "\n".join([f"Target: {f.target_value:.2f}, Horizon: {f.forecast_horizon}" for f in forecasts])
-        messagebox.showinfo("Forecast Results", msg)
-
-    def displayTrends(self, data: List) -> None:
-        pass
+    def showForecasts(self, forecasts: List[Forecast]) -> None: 
+        print(f"Forecasts ready: {len(forecasts)}")
 
 class IRecommendationRepresentation(IRepresentation):
     def displayRecommendations(self, recommendations: List[Recommendation]) -> None:
-        pass
-
-    def highlightCriticals(self, recommendations: List[Recommendation]) -> None:
-        for r in recommendations:
-            if r.rec_value != "hold":
-                messagebox.showwarning("Recommendation Signal", f"Signal: {r.rec_value.upper()} for asset {r.asset_id}")
+        print(f"Recommendations: {recommendations}")
 
 class IDashboardRepresentation(IRepresentation):
     def showCurrentQuotes(self, quotes: List[Quote]) -> None:
-        pass
-    def showNews(self, news: List[News]) -> None:
-        pass
+        print("Quotes updated on dashboard")
 
 class IPortfolioRepresentation(IRepresentation):
     def showPortfolioContents(self, portfolio: Portfolio) -> None:
-        pass
-    def showOperationsHistory(self, operations: List) -> None:
-        pass
+        print(f"Portfolio: {portfolio.title}")
+
+class LoginWindow(tk.Toplevel):
+    def __init__(self, root, auth_controller, on_success):
+        super().__init__(root)
+        self.title("Financial Platform - Login")
+        self.geometry("400x550")
+        self.auth = auth_controller
+        self.on_success = on_success
+        self.protocol("WM_DELETE_WINDOW", root.destroy)
+        self.configure(bg="#f0f2f5")
+        self.setup_ui()
+        
+    def setup_ui(self):
+        style = ttk.Style()
+        style.configure("TLabel", background="#f0f2f5", font=("Segoe UI", 10))
+        
+        tk.Label(self, text="Welcome Back", font=("Segoe UI", 20, "bold"), bg="#f0f2f5", fg="#2c3e50").pack(pady=30)
+        
+        nb = ttk.Notebook(self)
+        nb.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        f_login = tk.Frame(nb, bg="white")
+        tk.Label(f_login, text="Username", bg="white").pack(pady=(20,5))
+        e_user = ttk.Entry(f_login)
+        e_user.pack(fill=tk.X, padx=20)
+        
+        tk.Label(f_login, text="Password", bg="white").pack(pady=(10,5))
+        e_pass = ttk.Entry(f_login, show="*")
+        e_pass.pack(fill=tk.X, padx=20)
+        
+        def do_login():
+            user = self.auth.login(e_user.get(), e_pass.get())
+            if user:
+                self.on_success(user)
+                self.destroy()
+            else:
+                messagebox.showerror("Error", "Invalid credentials")
+                
+        ttk.Button(f_login, text="Login", command=do_login).pack(pady=30)
+        nb.add(f_login, text="Sign In")
+        
+        f_reg = tk.Frame(nb, bg="white")
+        tk.Label(f_reg, text="New Username", bg="white").pack(pady=(20,5))
+        r_user = ttk.Entry(f_reg)
+        r_user.pack(fill=tk.X, padx=20)
+        
+        tk.Label(f_reg, text="Password", bg="white").pack(pady=(10,5))
+        r_pass = ttk.Entry(f_reg, show="*")
+        r_pass.pack(fill=tk.X, padx=20)
+        
+        tk.Label(f_reg, text="Goal (Role)", bg="white").pack(pady=(10,5))
+        r_role = ttk.Combobox(f_reg, values=["Investor", "Analyst"], state="readonly")
+        r_role.current(0)
+        r_role.pack(fill=tk.X, padx=20)
+        
+        def do_reg():
+            user = self.auth.register(r_user.get(), r_pass.get(), r_role.get())
+            if user:
+                messagebox.showinfo("Success", "Registered! Logging in...")
+                self.on_success(user)
+                self.destroy()
+            else:
+                messagebox.showerror("Error", "Registration failed")
+        
+        ttk.Button(f_reg, text="Register", command=do_reg).pack(pady=30)
+        nb.add(f_reg, text="Create Account")
 
 class MainWindow(tk.Tk):
     def __init__(self, controllers, reps):
         super().__init__()
+        self.withdraw()
         self.ctrls = controllers
         self.reps = reps
         self.title("Financial Analysis Platform")
-        self.geometry("1000x700")
+        self.geometry("1200x850")
         self.current_user = None
-        self.show_login()
+        
+        LoginWindow(self, self.ctrls['auth'], self.start_session)
 
-    def show_login(self):
-        for w in self.winfo_children(): w.destroy()
-        frame = tk.Frame(self)
-        frame.place(relx=0.5, rely=0.5, anchor="center")
-        
-        tk.Label(frame, text="Login", font=("Arial", 14)).pack()
-        e_user = tk.Entry(frame); e_user.pack(pady=5)
-        tk.Label(frame, text="Password").pack()
-        e_pass = tk.Entry(frame, show="*"); e_pass.pack(pady=5)
-        
-        def login():
-            u = self.ctrls['auth'].login(e_user.get(), e_pass.get())
-            if u:
-                self.current_user = u
-                self.show_main()
-            else:
-                messagebox.showerror("Error", "Invalid credentials")
-        
-        tk.Button(frame, text="Enter", command=login).pack(pady=10)
-        tk.Button(frame, text="Register", command=lambda: self.ctrls['auth'].register(e_user.get(), e_pass.get(), "Investor")).pack()
-
-    def show_main(self):
-        for w in self.winfo_children(): w.destroy()
-        
+    def start_session(self, user):
+        self.current_user = user
+        self.deiconify()
         self.ctrls['dash'].startMonitoring()
-        
-        nb = ttk.Notebook(self)
-        nb.pack(fill=tk.BOTH, expand=True)
-        
-        self.tab_dash(nb)
-        self.tab_forecast(nb)
-        self.tab_report(nb)
-        self.tab_auto(nb)
+        self.setup_main_ui()
 
-    def tab_dash(self, nb):
-        frame = tk.Frame(nb)
-        nb.add(frame, text="Dashboard")
+    def setup_main_ui(self):
+        header = tk.Frame(self, bg="#2c3e50", height=60)
+        header.pack(fill=tk.X)
+        tk.Label(header, text=f"Financial Platform | {self.current_user.login} ({self.current_user.role})", 
+                 bg="#2c3e50", fg="white", font=("Segoe UI", 12, "bold")).pack(side=tk.LEFT, padx=20, pady=15)
         
-        data = self.ctrls['dash'].getDashboardData()
-        row = tk.Frame(frame)
-        row.pack(fill=tk.X, padx=10, pady=10)
+        self.nb = ttk.Notebook(self)
+        self.nb.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        for item in data:
-            card = tk.Frame(row, bd=2, relief="groove", padx=5, pady=5)
-            card.pack(side=tk.LEFT, padx=5)
-            tk.Label(card, text=item['ticker'], font="bold").pack()
-            tk.Label(card, text=f"{item['price']:.2f} ({item['change']:.2f}%)", fg="green" if item['change']>=0 else "red").pack()
-            ChartWidget(card, item['history'], 100, 50).pack()
+        self.create_dashboard()
+        
+        if self.current_user.role in ["Analyst", "Manager"]:
+            self.create_forecasting()
+            
+        if self.current_user.role in ["Investor", "Manager"]:
+            self.create_reports()
+            self.create_autotrading()
 
-        tk.Label(frame, text="My Portfolio", font=("Arial", 12, "bold")).pack(pady=10)
-        p_frame = tk.Frame(frame)
-        p_frame.pack()
+    def create_dashboard(self):
+        tab = tk.Frame(self.nb)
+        self.nb.add(tab, text="Dashboard")
         
-        def refresh_p():
-            for w in p_frame.winfo_children(): w.destroy()
-            pf = self.ctrls['port'].getPortfolio(self.current_user.user_id)
-            if pf and pf.positions:
-                for pos in pf.positions:
-                    tk.Label(p_frame, text=f"Asset: {pos.asset_id} | Qty: {pos.quantity}").pack()
+        f_top = tk.LabelFrame(tab, text="Market Monitoring", font=("Segoe UI", 10, "bold"))
+        f_top.pack(fill=tk.X, padx=10, pady=5)
+        
+        market_data = self.ctrls['dash'].getMarketData()
+        
+        f_charts = tk.Frame(f_top)
+        f_charts.pack(fill=tk.X, padx=5, pady=5)
+        
+        for item in market_data[:3]:
+            f_card = tk.Frame(f_charts, bd=1, relief="solid", bg="white")
+            f_card.pack(side=tk.LEFT, padx=10, fill=tk.Y)
+            
+            color = "#2ecc71" if item['change'] >= 0 else "#e74c3c"
+            sign = "+" if item['change'] >= 0 else ""
+            
+            tk.Label(f_card, text=item['ticker'], font=("Segoe UI", 12, "bold"), bg="white").pack()
+            tk.Label(f_card, text=f"{item['price']:.2f}", font=("Segoe UI", 14), bg="white").pack()
+            tk.Label(f_card, text=f"{sign}{item['change']:.2f}%", fg=color, font=("Segoe UI", 10), bg="white").pack()
+            ModernChartWidget(f_card, item['history'], width=150, height=80, title="").pack()
+
+            if self.current_user.role in ["Investor", "Manager"]:
+                btn_f = tk.Frame(f_card, bg="white")
+                btn_f.pack(fill=tk.X, pady=5)
+                tk.Button(btn_f, text="Buy", bg="#2ecc71", fg="white", 
+                          command=lambda i=item['id']: self.prompt_trade("buy", i)).pack(side=tk.LEFT, padx=5)
+                tk.Button(btn_f, text="Sell", bg="#e74c3c", fg="white", 
+                          command=lambda i=item['id']: self.prompt_trade("sell", i)).pack(side=tk.RIGHT, padx=5)
+            
+        f_bot = tk.LabelFrame(tab, text="My Favorites / Wallet", font=("Segoe UI", 10, "bold"))
+        f_bot.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        
+        cols = ("Asset", "Quantity", "Current Value ($)", "Change Since Purchase")
+        self.tree_pf = ttk.Treeview(f_bot, columns=cols, show="headings")
+        for c in cols: self.tree_pf.heading(c, text=c)
+        self.tree_pf.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        self.refresh_portfolio_view()
+
+    def prompt_trade(self, action, asset_id):
+        qty = simpledialog.askfloat(action.title(), f"Amount to {action}:")
+        if qty:
+            cmd = None
+            if action == "buy":
+                cmd = BuyAssetCommand(self.ctrls['port'], asset_id, qty, self.current_user.user_id)
             else:
-                tk.Label(p_frame, text="Empty").pack()
+                cmd = SellAssetCommand(self.ctrls['port'], asset_id, qty, self.current_user.user_id)
+            
+            cmd.execute()
+            self.refresh_portfolio_view()
+            messagebox.showinfo("Success", f"Order Executed: {action.upper()} {qty}")
 
-        refresh_p()
-        
-        ctrl = tk.Frame(frame)
-        ctrl.pack(pady=10)
-        e_asset = tk.Entry(ctrl, width=5); e_asset.pack(side=tk.LEFT)
-        e_qty = tk.Entry(ctrl, width=5); e_qty.pack(side=tk.LEFT)
-        
-        def buy():
-            from control import BuyAssetCommand
-            BuyAssetCommand(self.ctrls['port'], e_asset.get(), float(e_qty.get()), self.current_user.user_id).execute()
-            refresh_p()
-        
-        def sell():
-            from control import SellAssetCommand
-            SellAssetCommand(self.ctrls['port'], e_asset.get(), float(e_qty.get()), self.current_user.user_id).execute()
-            refresh_p()
+    def refresh_portfolio_view(self):
+        for i in self.tree_pf.get_children(): self.tree_pf.delete(i)
+        pf_data = self.ctrls['dash'].getPortfolioSummary(self.current_user.user_id)
+        if pf_data:
+            for item in pf_data:
+                self.tree_pf.insert("", tk.END, values=(item['ticker'], item['qty'], f"{item['value']:.2f}", f"{item['change']:.2f}%"))
+        else:
+            self.tree_pf.insert("", tk.END, values=("No assets", "-", "-", "-"))
 
-        tk.Button(ctrl, text="Buy", command=buy).pack(side=tk.LEFT)
-        tk.Button(ctrl, text="Sell", command=sell).pack(side=tk.LEFT)
-
-    def tab_forecast(self, nb):
-        frame = tk.Frame(nb)
-        nb.add(frame, text="Forecast")
+    def create_forecasting(self):
+        tab = tk.Frame(self.nb)
+        self.nb.add(tab, text="Forecasting")
         
-        tk.Label(frame, text="Analysis Context").pack()
+        paned = ttk.PanedWindow(tab, orient=tk.HORIZONTAL)
+        paned.pack(fill=tk.BOTH, expand=True)
+        
+        f_left = tk.Frame(paned, width=300, bg="#f9f9f9")
+        f_right = tk.Frame(paned, bg="white")
+        paned.add(f_left)
+        paned.add(f_right)
+        
+        tk.Label(f_left, text="Configuration", font=("Segoe UI", 12, "bold"), bg="#f9f9f9").pack(pady=20)
+        
         assets = self.ctrls['forecast'].getAvailableAssets()
-        cb = ttk.Combobox(frame, values=[a.ticker for a in assets])
-        cb.pack()
-        if assets: cb.current(0)
+        tk.Label(f_left, text="Select Asset:", bg="#f9f9f9").pack(anchor="w", padx=20)
+        cb_asset = ttk.Combobox(f_left, values=[a.ticker for a in assets], state="readonly")
+        cb_asset.pack(fill=tk.X, padx=20, pady=5)
+        if assets: cb_asset.current(0)
         
-        res_lbl = tk.Label(frame, text="...")
-        res_lbl.pack(pady=10)
+        tk.Label(f_left, text="Model:", bg="#f9f9f9").pack(anchor="w", padx=20)
+        cb_model = ttk.Combobox(f_left, values=["ARIMA", "LSTM", "Random Forest"], state="readonly")
+        cb_model.current(0)
+        cb_model.pack(fill=tk.X, padx=20, pady=5)
         
-        def run():
-            from model import AnalysisContext
-            asset_obj = next((a for a in assets if a.ticker == cb.get()), assets[0])
-            ctx = AnalysisContext(self.current_user.user_id, [asset_obj.asset_id], "1M")
+        tk.Label(f_left, text="Period:", bg="#f9f9f9").pack(anchor="w", padx=20)
+        cb_period = ttk.Combobox(f_left, values=["1W", "1M"], state="readonly")
+        cb_period.current(1)
+        cb_period.pack(fill=tk.X, padx=20, pady=5)
+        
+        lbl_res = tk.Label(f_left, text="", bg="#f9f9f9", justify=tk.LEFT)
+        lbl_res.pack(pady=20, padx=20)
+        
+        chart_container = tk.Frame(f_right, bg="white")
+        chart_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        def run_forecast():
+            ticker = cb_asset.get()
+            asset_obj = next((a for a in assets if a.ticker == ticker), None)
+            ctx = AnalysisContext(self.current_user.user_id, [asset_obj.asset_id], cb_period.get())
             
-            f = self.ctrls['forecast'].createForecast(ctx)
-            recs = self.ctrls['rec'].generateRecommendations(ctx)
+            rec_text = self.ctrls['analysis'].analyseData(asset_obj.asset_id)
+            f = self.ctrls['forecast'].createForecast(ctx, cb_model.get())
             
-            self.reps['rec'].highlightCriticals(recs)
-            self.reps['forecast'].showForecasts([f])
+            recs = self.ctrls['rec'].generateRecommendations(ctx, rec_text)
+            final_rec = recs[0].rec_value.upper()
             
-            res_lbl.config(text=f"Analyzed {asset_obj.ticker}. Target: {f.target_value:.2f}")
+            res_txt = (f"Target Price: {f.target_value:.2f}\n"
+                       f"Confidence Interval: [{f.conf_interval[0]:.2f}, {f.conf_interval[1]:.2f}]\n"
+                       f"Volatility: {f.volatility*100:.1f}%\n"
+                       f"Recommendation: {final_rec}")
+            
+            lbl_res.config(text=res_txt, font=("Segoe UI", 11), fg="#2980b9")
+            
+            for w in chart_container.winfo_children(): w.destroy()
+            hist_data = self.ctrls['dash'].getMarketData()
+            asset_hist = next((h['history'] for h in hist_data if h['ticker'] == ticker), [])
+            
+            full_data = asset_hist + [f.target_value]
+            ModernChartWidget(chart_container, full_data, width=700, height=400, title=f"{ticker} Forecast Analysis").pack()
 
-        tk.Button(frame, text="Analyze", command=run).pack()
+        ttk.Button(f_left, text="Generate Forecast", command=run_forecast).pack(fill=tk.X, padx=20, pady=10)
 
-    def tab_report(self, nb):
-        frame = tk.Frame(nb)
-        nb.add(frame, text="Reports")
-        
-        lbl_content = tk.Label(frame, text="", justify=tk.LEFT, bg="#eee", padx=10, pady=10)
-        lbl_content.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        self.reps['rep'].set_view(lbl_content)
-        
-        def gen():
-            r = self.ctrls['rep'].generateReport("Monthly", self.current_user.user_id)
-            self.reps['rep'].showReport(r)
+        if self.current_user.role == "Analyst":
+            tk.Label(f_left, text="--- Model Management ---", bg="#f9f9f9").pack(pady=10)
+            def train_model_ui():
+                name = simpledialog.askstring("New Model", "Model Name:")
+                if name:
+                    m = self.ctrls['forecast'].train_new_model(name, {"epoch": 100, "layers": 5})
+                    messagebox.showinfo("Model Training", f"Model '{m.name}' Status: {m.status}\nAccuracy: {m.accuracy:.2f}")
             
-        tk.Button(frame, text="Generate Report", command=gen).pack()
+            ttk.Button(f_left, text="Train New Model", command=train_model_ui).pack(fill=tk.X, padx=20, pady=5)
 
-    def tab_auto(self, nb):
-        frame = tk.Frame(nb)
-        nb.add(frame, text="AutoTrading")
+    def create_reports(self):
+        tab = tk.Frame(self.nb)
+        self.nb.add(tab, text="Reports")
         
-        tk.Label(frame, text="Bot Manager").pack()
-        lst = tk.Listbox(frame)
-        lst.pack(fill=tk.BOTH, expand=True)
+        f_metrics = tk.Frame(tab)
+        f_metrics.pack(fill=tk.X, padx=20, pady=20)
         
-        def refresh():
-            lst.delete(0, tk.END)
+        self.metric_labels = {}
+        metrics_keys = ["Yield", "Volatility", "Benchmark (S&P500)", "VaR (95%)", "Stress Test (-20%)"]
+        
+        for k in metrics_keys:
+            f_m = tk.Frame(f_metrics, bg="white", bd=1, relief="ridge", width=150, height=80)
+            f_m.pack(side=tk.LEFT, padx=10, fill=tk.BOTH, expand=True)
+            f_m.pack_propagate(False)
+            tk.Label(f_m, text=k, bg="white", fg="#777").pack(pady=(10,5))
+            l = tk.Label(f_m, text="-", bg="white", font=("Segoe UI", 14, "bold"))
+            l.pack()
+            self.metric_labels[k] = l
+
+        f_content = tk.Frame(tab)
+        f_content.pack(fill=tk.BOTH, expand=True, padx=20)
+        
+        lbl_details = tk.Label(f_content, text="Generate a report to see details.", justify=tk.LEFT, font=("Consolas", 10))
+        lbl_details.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        chart_frame = tk.Frame(f_content, bg="white")
+        chart_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        
+        def gen_report():
+            rep = self.ctrls['rep'].generateReport("YTD", self.current_user.user_id)
+            lbl_details.config(text=rep.content)
+            
+            for k, v in rep.metrics.items():
+                if k in self.metric_labels:
+                    self.metric_labels[k].config(text=v)
+            
+            for w in chart_frame.winfo_children(): w.destroy()
+            import random
+            dummy_yield = [100 + i + random.uniform(-2, 3) for i in range(50)]
+            ModernChartWidget(chart_frame, dummy_yield, width=500, height=300, title="Portfolio Performance (YTD)").pack()
+            
+        ttk.Button(tab, text="Run Analytics", command=gen_report).pack(pady=10)
+
+    def create_autotrading(self):
+        tab = tk.Frame(self.nb)
+        self.nb.add(tab, text="AutoTrading")
+        
+        f_form = tk.LabelFrame(tab, text="Create Trading Bot", padx=10, pady=10)
+        f_form.pack(side=tk.LEFT, fill=tk.BOTH, padx=10, pady=10, expand=False, width=300)
+        
+        tk.Label(f_form, text="Bot Name").pack(anchor="w")
+        e_name = ttk.Entry(f_form); e_name.pack(fill=tk.X, pady=5)
+        
+        tk.Label(f_form, text="Strategy").pack(anchor="w")
+        c_strat = ttk.Combobox(f_form, values=["Moving Average", "RSI Scalp", "Mean Reversion"])
+        c_strat.pack(fill=tk.X, pady=5)
+        
+        tk.Label(f_form, text="Asset (Ticker)").pack(anchor="w")
+        assets = self.ctrls['dash'].getMarketData()
+        c_asset = ttk.Combobox(f_form, values=[a['ticker'] for a in assets])
+        c_asset.pack(fill=tk.X, pady=5)
+        
+        tk.Label(f_form, text="Stop Loss (%)").pack(anchor="w")
+        e_sl = ttk.Entry(f_form); e_sl.pack(fill=tk.X, pady=5)
+        
+        tk.Label(f_form, text="Take Profit (%)").pack(anchor="w")
+        e_tp = ttk.Entry(f_form); e_tp.pack(fill=tk.X, pady=5)
+        
+        tk.Label(f_form, text="Max Position Size ($)").pack(anchor="w")
+        e_max = ttk.Entry(f_form); e_max.pack(fill=tk.X, pady=5)
+        
+        f_list = tk.LabelFrame(tab, text="Active Bots", padx=10, pady=10)
+        f_list.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        cols = ("Name", "Strategy", "Asset", "SL/TP")
+        tree = ttk.Treeview(f_list, columns=cols, show="headings")
+        for c in cols: tree.heading(c, text=c)
+        tree.pack(fill=tk.BOTH, expand=True)
+        
+        def refresh_bots():
+            for i in tree.get_children(): tree.delete(i)
             bots = self.ctrls['bot'].getUserBots(self.current_user.user_id)
-            for b in bots: lst.insert(tk.END, f"{b.name} ({b.strategy})")
-            
-        def create():
-            self.ctrls['bot'].createBot(f"Bot-{random.randint(100,999)}", "Scalping", "AAPL", 0.95, 1.05, 1000, self.current_user.user_id)
-            refresh()
-            
-        def run_cycle():
-            res = self.ctrls['bot'].run_bot_cycle(self.current_user.user_id)
-            messagebox.showinfo("Bot Cycle", "\n".join(res))
-            
-        tk.Button(frame, text="Create Random Bot", command=create).pack()
-        tk.Button(frame, text="Run Cycle", command=run_cycle).pack()
-        refresh()
+            for b in bots:
+                tree.insert("", tk.END, values=(b.name, b.strategy, b.assets, f"{b.stop_loss}% / {b.take_profit}%"))
+        
+        def run_execution_cycle():
+            logs = self.ctrls['bot'].run_bot_cycle(self.current_user.user_id)
+            for l in logs: print(f"[BOT LOG] {l}")
+            messagebox.showinfo("Bot Execution", f"Cycle completed. Checked {len(logs)} bots.")
+
+        def add_bot():
+            try:
+                self.ctrls['bot'].createBot(
+                    e_name.get(), c_strat.get(), c_asset.get(),
+                    float(e_sl.get()), float(e_tp.get()), float(e_max.get()),
+                    self.current_user.user_id
+                )
+                refresh_bots()
+                messagebox.showinfo("Success", "Bot Deployed")
+            except ValueError:
+                messagebox.showerror("Error", "Please check numeric fields")
+                
+        ttk.Button(f_form, text="Deploy Bot", command=add_bot).pack(pady=20, fill=tk.X)
+        ttk.Button(f_list, text="Run Execution Cycle", command=run_execution_cycle).pack(fill=tk.X)
+        refresh_bots()

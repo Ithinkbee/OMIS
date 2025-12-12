@@ -12,18 +12,6 @@ class User:
     def __repr__(self):
         return f"<User {self.login} ({self.role})>"
 
-class PrivateInvestor(User):
-    def __init__(self, user_id, login, password):
-        super().__init__(user_id, login, password, "Investor")
-
-class FinancialAnalyst(User):
-    def __init__(self, user_id, login, password):
-        super().__init__(user_id, login, password, "Analyst")
-    
-class FundManager(User):
-    def __init__(self, user_id, login, password):
-        super().__init__(user_id, login, password, "Manager")
-
 class AnalysisContext:
     def __init__(self, user_id, assets_list, time_interval):
         self.user_id = user_id
@@ -36,9 +24,29 @@ class Asset:
         self.ticker = ticker
         self.title = title
         self.asset_type = asset_type
-    
-    def __repr__(self):
-        return f"{self.ticker}"
+
+class Risk:
+    def __init__(self, risk_id, risk_type, name, probability):
+        self.risk_id = risk_id
+        self.risk_type = risk_type
+        self.name = name
+        self.probability = probability
+
+class Rule:
+    def __init__(self, rule_id, name, condition, action, weight):
+        self.rule_id = rule_id
+        self.name = name
+        self.condition = condition
+        self.action = action
+        self.weight = weight
+
+class AnalysisModelEntity:
+    def __init__(self, model_id, name, params, status, accuracy):
+        self.model_id = model_id
+        self.name = name
+        self.params = params
+        self.status = status
+        self.accuracy = accuracy
 
 class TradingBot:
     def __init__(self, bot_id, name, strategy, assets, stop_loss, take_profit, max_pos, user_id):
@@ -94,8 +102,13 @@ class News:
 class DataRepository(Repository):
     def getQuotes(self, asset_id, period) -> List[Quote]:
         cursor = self.conn.cursor()
-        cursor.execute("SELECT * FROM quotes WHERE asset_id = ? ORDER BY time", (asset_id,))
-        return [Quote(*row) for row in cursor.fetchall()]
+        limit = 100
+        if period == "1W": limit = 7
+        elif period == "1M": limit = 30
+        
+        cursor.execute(f"SELECT * FROM quotes WHERE asset_id = ? ORDER BY time DESC LIMIT {limit}", (asset_id,))
+        rows = cursor.fetchall()
+        return [Quote(*row) for row in reversed(rows)]
 
     def getNews(self, asset_id, period) -> List[News]:
         cursor = self.conn.cursor()
@@ -128,19 +141,21 @@ class ReportRepository(Repository):
         return Report(report_id, "Generated Report", "N/A", "Content loaded from archive")
 
     def createReport(self, params) -> Report:
-        return Report(str(uuid.uuid4()), params['title'], params['period'], params['content'])
+        return Report(str(uuid.uuid4()), params['title'], params['period'], params['content'], params.get('metrics'))
     
     def saveObject(self, object) -> None:
-        print(f"[DB LOG] Report {object.report_id} saved (simulated).")
+        print(f"[DB LOG] Report {object.report_id} saved to persistent archive.")
 
 class Forecast:
-    def __init__(self, f_id, time, horizon, target, accuracy, asset_id):
+    def __init__(self, f_id, time, horizon, target, accuracy, asset_id, conf_interval=None, volatility=None):
         self.forecast_id = f_id
         self.creation_time = time
         self.forecast_horizon = horizon
         self.target_value = target
         self.accuracy = accuracy
         self.asset_id = asset_id
+        self.conf_interval = conf_interval
+        self.volatility = volatility
 
 class ForecastRepository(Repository):
     def getForecasts(self, context) -> List[Forecast]:
@@ -259,5 +274,34 @@ class BotRepository(Repository):
     def getBots(self, user_id):
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM bots WHERE user_id=?", (user_id,))
-
         return [TradingBot(*r) for r in cursor.fetchall()]
+
+class RiskRepository(Repository):
+    def get_all_risks(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM risks")
+        return [Risk(*r) for r in cursor.fetchall()]
+    
+    def saveObject(self, obj):
+        pass
+
+class RuleRepository(Repository):
+    def get_all_rules(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM rules")
+        return [Rule(*r) for r in cursor.fetchall()]
+    
+    def saveObject(self, obj):
+        pass
+
+class ModelRepository(Repository):
+    def get_all_models(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM analysis_models")
+        return [AnalysisModelEntity(*r) for r in cursor.fetchall()]
+
+    def saveObject(self, obj: AnalysisModelEntity) -> None:
+        cursor = self.conn.cursor()
+        cursor.execute("INSERT OR REPLACE INTO analysis_models VALUES (?,?,?,?,?)", 
+                       (obj.model_id, obj.name, obj.params, obj.status, obj.accuracy))
+        self.conn.commit()
