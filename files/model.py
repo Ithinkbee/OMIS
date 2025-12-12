@@ -259,4 +259,5 @@ class BotRepository(Repository):
     def getBots(self, user_id):
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM bots WHERE user_id=?", (user_id,))
+
         return [TradingBot(*r) for r in cursor.fetchall()]
