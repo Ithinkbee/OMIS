@@ -19,6 +19,9 @@ class AuthController(IController):
         self.current_user = user
         return user
 
+    def logout(self):
+        self.current_user = None
+
     def register(self, login, password, role):
         if role == "Manager":
             return None 
@@ -313,6 +316,9 @@ class AutoTradingController(IController):
         self.repo = bot_repo
         self.data_repo = data_repo
 
+    def getAvailableStrategies(self):
+        return ["Moving Average Crossover", "RSI Scalping", "Mean Reversion", "Bollinger Breakout"]
+
     def createBot(self, name, strategy, assets, sl, tp, max_p, user_id):
         b = TradingBot(str(uuid.uuid4()), name, strategy, assets, sl, tp, max_p, user_id)
         self.repo.saveBot(b)
@@ -327,3 +333,4 @@ class AutoTradingController(IController):
         for bot in bots:
             log.append(f"Bot {bot.name}: Checked market conditions. Holding position.")
         return log
+

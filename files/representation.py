@@ -144,26 +144,45 @@ class LoginWindow(tk.Toplevel):
 class MainWindow(tk.Tk):
     def __init__(self, controllers, reps):
         super().__init__()
-        self.withdraw()
+        self.withdraw() 
         self.ctrls = controllers
         self.reps = reps
         self.title("Financial Analysis Platform")
         self.geometry("1200x850")
         self.current_user = None
         
+        self.launch_login()
+
+    def launch_login(self):
         LoginWindow(self, self.ctrls['auth'], self.start_session)
+
+    def do_logout(self):
+        self.ctrls['auth'].logout()
+        self.current_user = None
+        
+        for widget in self.winfo_children():
+            if isinstance(widget, tk.Toplevel): continue 
+            widget.destroy()
+            
+        self.withdraw()
+        self.launch_login()
 
     def start_session(self, user):
         self.current_user = user
-        self.deiconify()
+        self.deiconify() 
         self.ctrls['dash'].startMonitoring()
         self.setup_main_ui()
 
     def setup_main_ui(self):
         header = tk.Frame(self, bg="#2c3e50", height=60)
-        header.pack(fill=tk.X)
+        header.pack(fill=tk.X, side=tk.TOP)
+        
         tk.Label(header, text=f"Financial Platform | {self.current_user.login} ({self.current_user.role})", 
                  bg="#2c3e50", fg="white", font=("Segoe UI", 12, "bold")).pack(side=tk.LEFT, padx=20, pady=15)
+        
+        btn_logout = tk.Button(header, text="Logout / Switch User", bg="#c0392b", fg="white", 
+                               font=("Segoe UI", 9, "bold"), command=self.do_logout)
+        btn_logout.pack(side=tk.RIGHT, padx=20, pady=15)
         
         self.nb = ttk.Notebook(self)
         self.nb.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -176,6 +195,9 @@ class MainWindow(tk.Tk):
         if self.current_user.role in ["Investor", "Manager"]:
             self.create_reports()
             self.create_autotrading()
+        
+        if self.current_user.role == "Manager":
+            self.create_admin_settings()
 
     def create_dashboard(self):
         tab = tk.Frame(self.nb)
@@ -361,61 +383,110 @@ class MainWindow(tk.Tk):
         tab = tk.Frame(self.nb)
         self.nb.add(tab, text="AutoTrading")
         
-        f_form = tk.LabelFrame(tab, text="Create Trading Bot", padx=10, pady=10)
-        f_form.pack(side=tk.LEFT, fill=tk.BOTH, padx=10, pady=10, expand=False, width=300)
+        # --- Верхняя секция: Форма создания бота ---
+        f_top = tk.Frame(tab)
+        f_top.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
+
+        f_form = tk.LabelFrame(f_top, text="Create New Trading Bot", padx=15, pady=15, font=("Segoe UI", 10, "bold"))
+        f_form.pack(fill=tk.BOTH, expand=True)
         
-        tk.Label(f_form, text="Bot Name").pack(anchor="w")
-        e_name = ttk.Entry(f_form); e_name.pack(fill=tk.X, pady=5)
+        # Используем Grid для аккуратного расположения полей ввода
+        # Ряд 1: Название и Стратегия
+        tk.Label(f_form, text="Bot Name:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        e_name = ttk.Entry(f_form, width=25)
+        e_name.grid(row=0, column=1, sticky="w", padx=5, pady=5)
         
-        tk.Label(f_form, text="Strategy").pack(anchor="w")
-        c_strat = ttk.Combobox(f_form, values=["Moving Average", "RSI Scalp", "Mean Reversion"])
-        c_strat.pack(fill=tk.X, pady=5)
+        tk.Label(f_form, text="Strategy:").grid(row=0, column=2, sticky="w", padx=5, pady=5)
+        strategies = self.ctrls['bot'].getAvailableStrategies()
+        c_strat = ttk.Combobox(f_form, values=strategies, state="readonly", width=23)
+        c_strat.grid(row=0, column=3, sticky="w", padx=5, pady=5)
+        if strategies: c_strat.current(0)
+
+        # Ряд 2: Актив и Максимальная позиция
+        tk.Label(f_form, text="Target Asset:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        # Получаем список тикеров из контроллера дашборда
+        market_data = self.ctrls['dash'].getMarketData()
+        assets_list = [m['ticker'] for m in market_data]
+        c_asset = ttk.Combobox(f_form, values=assets_list, state="readonly", width=23)
+        c_asset.grid(row=1, column=1, sticky="w", padx=5, pady=5)
+        if assets_list: c_asset.current(0)
         
-        tk.Label(f_form, text="Asset (Ticker)").pack(anchor="w")
-        assets = self.ctrls['dash'].getMarketData()
-        c_asset = ttk.Combobox(f_form, values=[a['ticker'] for a in assets])
-        c_asset.pack(fill=tk.X, pady=5)
+        tk.Label(f_form, text="Max Position ($):").grid(row=1, column=2, sticky="w", padx=5, pady=5)
+        e_max = ttk.Entry(f_form, width=25)
+        e_max.grid(row=1, column=3, sticky="w", padx=5, pady=5)
+
+        # Ряд 3: Риск-менеджмент
+        tk.Label(f_form, text="Stop Loss (%):").grid(row=2, column=0, sticky="w", padx=5, pady=5)
+        e_sl = ttk.Entry(f_form, width=25)
+        e_sl.grid(row=2, column=1, sticky="w", padx=5, pady=5)
         
-        tk.Label(f_form, text="Stop Loss (%)").pack(anchor="w")
-        e_sl = ttk.Entry(f_form); e_sl.pack(fill=tk.X, pady=5)
+        tk.Label(f_form, text="Take Profit (%):").grid(row=2, column=2, sticky="w", padx=5, pady=5)
+        e_tp = ttk.Entry(f_form, width=25)
+        e_tp.grid(row=2, column=3, sticky="w", padx=5, pady=5)
+
+        # --- Нижняя секция: Список ботов ---
+        f_bot = tk.Frame(tab)
+        f_bot.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        tk.Label(f_form, text="Take Profit (%)").pack(anchor="w")
-        e_tp = ttk.Entry(f_form); e_tp.pack(fill=tk.X, pady=5)
+        lbl_list = tk.Label(f_bot, text="Your Active Bots", font=("Segoe UI", 10, "bold"), anchor="w")
+        lbl_list.pack(fill=tk.X, pady=(10, 5))
+
+        cols = ("Name", "Strategy", "Asset", "SL (%)", "TP (%)", "Max Pos ($)")
+        tree = ttk.Treeview(f_bot, columns=cols, show="headings", height=8)
         
-        tk.Label(f_form, text="Max Position Size ($)").pack(anchor="w")
-        e_max = ttk.Entry(f_form); e_max.pack(fill=tk.X, pady=5)
+        # Настройка столбцов
+        tree.heading("Name", text="Name")
+        tree.column("Name", width=120)
+        tree.heading("Strategy", text="Strategy")
+        tree.column("Strategy", width=150)
+        tree.heading("Asset", text="Asset")
+        tree.column("Asset", width=80, anchor="center")
+        tree.heading("SL (%)", text="Stop Loss")
+        tree.column("SL (%)", width=80, anchor="center")
+        tree.heading("TP (%)", text="Take Profit")
+        tree.column("TP (%)", width=80, anchor="center")
+        tree.heading("Max Pos ($)", text="Max Position")
+        tree.column("Max Pos ($)", width=100, anchor="center")
         
-        f_list = tk.LabelFrame(tab, text="Active Bots", padx=10, pady=10)
-        f_list.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        cols = ("Name", "Strategy", "Asset", "SL/TP")
-        tree = ttk.Treeview(f_list, columns=cols, show="headings")
-        for c in cols: tree.heading(c, text=c)
         tree.pack(fill=tk.BOTH, expand=True)
-        
+
+        # Функция обновления списка
         def refresh_bots():
             for i in tree.get_children(): tree.delete(i)
             bots = self.ctrls['bot'].getUserBots(self.current_user.user_id)
             for b in bots:
-                tree.insert("", tk.END, values=(b.name, b.strategy, b.assets, f"{b.stop_loss}% / {b.take_profit}%"))
-        
-        def run_execution_cycle():
-            logs = self.ctrls['bot'].run_bot_cycle(self.current_user.user_id)
-            for l in logs: print(f"[BOT LOG] {l}")
-            messagebox.showinfo("Bot Execution", f"Cycle completed. Checked {len(logs)} bots.")
+                tree.insert("", tk.END, values=(b.name, b.strategy, b.assets, b.stop_loss, b.take_profit, b.max_pos))
 
+        # Функция создания бота
         def add_bot():
             try:
-                self.ctrls['bot'].createBot(
-                    e_name.get(), c_strat.get(), c_asset.get(),
-                    float(e_sl.get()), float(e_tp.get()), float(e_max.get()),
-                    self.current_user.user_id
-                )
+                name = e_name.get()
+                strat = c_strat.get()
+                asset = c_asset.get()
+                sl = float(e_sl.get())
+                tp = float(e_tp.get())
+                mx = float(e_max.get())
+
+                if not name or not strat or not asset:
+                    messagebox.showerror("Error", "Please fill in all text fields")
+                    return
+
+                self.ctrls['bot'].createBot(name, strat, asset, sl, tp, mx, self.current_user.user_id)
                 refresh_bots()
-                messagebox.showinfo("Success", "Bot Deployed")
-            except ValueError:
-                messagebox.showerror("Error", "Please check numeric fields")
+                messagebox.showinfo("Success", f"Bot '{name}' successfully deployed!")
                 
-        ttk.Button(f_form, text="Deploy Bot", command=add_bot).pack(pady=20, fill=tk.X)
-        ttk.Button(f_list, text="Run Execution Cycle", command=run_execution_cycle).pack(fill=tk.X)
+                # Очистка полей
+                e_name.delete(0, tk.END)
+                e_sl.delete(0, tk.END)
+                e_tp.delete(0, tk.END)
+                e_max.delete(0, tk.END)
+                
+            except ValueError:
+                messagebox.showerror("Error", "SL, TP and Max Position must be numeric values")
+
+        # Кнопка деплоя (в форме ввода)
+        btn_deploy = ttk.Button(f_form, text="Deploy Bot", command=add_bot)
+        btn_deploy.grid(row=3, column=0, columnspan=4, pady=15, sticky="ew")
+
+        # Инициализация списка при загрузке вкладки
         refresh_bots()
