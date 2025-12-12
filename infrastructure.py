@@ -1,58 +1,67 @@
 from pyclbr import Class
-from typing import List
-from control import AnalysisController, DashboardController, ForecastController, PortfolioManagementController, RecommendationController, ReportController
-from representation import IDashboardRepresentation, IForecastRepresentation, IPortfolioRepresentation, IRecommendationRepresentation, IReportRepresentation
+from typing import List, Any, Type
+from control import *
+from representation import *
+from model import *
 
-#injector
-#создаёт Repository 
 class DependencyContainer:
-    def registerInterface(self, class_, realization) -> None:
-        pass
+    def __init__(self):
+        self._registry = {}
+
+    def registerInterface(self, class_, instance) -> None:
+        self._registry[class_] = instance
 
     def allowInterface(self, class_) -> object:
-        pass
+        if class_ in self._registry:
+            return self._registry[class_]
+        return None
 
-    def createController(self, type) -> Class:
-        pass
+    def createController(self, type_cls) -> Any:
+        return self.allowInterface(type_cls)
 
-    def createRepresentation(self, type) -> Class:
-        pass
+    def createRepresentation(self, type_cls) -> Any:
+        return self.allowInterface(type_cls)
 
-#injector
 class RepresentationFacroty:
     def createDashboardRepresentation(self, controller: DashboardController) -> IDashboardRepresentation:
-        pass
+        return IDashboardRepresentation(controller)
 
     def createRecommendationRepresentation(self, controller: RecommendationController) -> IRecommendationRepresentation:
-        pass
+        return IRecommendationRepresentation(controller)
 
     def createForecastRepresentation(self, controller: ForecastController) -> IForecastRepresentation:
-        pass
+        return IForecastRepresentation(controller)
 
     def createReportRepresentation(self, controller: ReportController) -> IReportRepresentation:
-        pass
+        return IReportRepresentation(controller)
 
     def createPortfolioRepresentation(self, controller: PortfolioManagementController) -> IPortfolioRepresentation:
-        pass
+        return IPortfolioRepresentation(controller)
 
-#injector
 class ControllerFactory:
-    def createDashboardController(self, repositories: List) -> DashboardController:
-        pass
+    def __init__(self, conn):
+        self.conn = conn
 
-    def createPortfolioManagementController(self, repositories: List) -> PortfolioManagementController:
-        pass
+    def createDashboardController(self) -> DashboardController:
+        return DashboardController(DataRepository(self.conn), PortfolioRepository(self.conn))
 
-    def createAnalysisController(self, repositories: List, strategies: List) -> AnalysisController:
-        pass
+    def createPortfolioManagementController(self) -> PortfolioManagementController:
+        return PortfolioManagementController(PortfolioRepository(self.conn))
 
-    def createForecastController(self, repositories: List) -> ForecastController:
-        pass
+    def createAnalysisController(self) -> AnalysisController:
+        return AnalysisController(DataRepository(self.conn), [TechnicalAnalysisStrategy(), SentimentAnalysisStrategy()])
 
-    def createRecommendationController(self, repositories: List) -> RecommendationController:
-        pass
+    def createForecastController(self) -> ForecastController:
+        return ForecastController(ForecastRepository(self.conn), DataRepository(self.conn))
 
-    def createReportController(self, repositories: List) -> ReportController:
-        pass
+    def createRecommendationController(self) -> RecommendationController:
+        return RecommendationController(RecommendationRepository(self.conn))
 
+    def createReportController(self) -> ReportController:
+        return ReportController(ReportRepository(self.conn), PortfolioRepository(self.conn), DataRepository(self.conn))
     
+    def createAuthController(self) -> AuthController:
+        return AuthController(UserRepository(self.conn))
+    
+    def createAutoTradingController(self) -> AutoTradingController:
+        return AutoTradingController(BotRepository(self.conn))
