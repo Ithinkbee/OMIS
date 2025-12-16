@@ -33,6 +33,9 @@ class AuthController(IController):
         except Exception as e:
             print(f"Registration error: {e}")
             return None
+            
+    def get_users(self):
+        return self.user_repo.get_all_users()
 
 class ForecastController(IController):
     def __init__(self, forecast_repo, data_repo, model_repo):
@@ -333,4 +336,3 @@ class AutoTradingController(IController):
         for bot in bots:
             log.append(f"Bot {bot.name}: Checked market conditions. Holding position.")
         return log
-

@@ -199,6 +199,108 @@ class MainWindow(tk.Tk):
         if self.current_user.role == "Manager":
             self.create_admin_settings()
 
+    def create_admin_settings(self):
+        tab = tk.Frame(self.nb)
+        self.nb.add(tab, text="Manager Settings")
+        
+        paned = ttk.PanedWindow(tab, orient=tk.HORIZONTAL)
+        paned.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        f_left = tk.LabelFrame(paned, text="Select User", padx=5, pady=5, font=("Segoe UI", 10, "bold"))
+        paned.add(f_left, weight=1)
+        
+        scrollbar = tk.Scrollbar(f_left)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        list_users = tk.Listbox(f_left, yscrollcommand=scrollbar.set, font=("Segoe UI", 10))
+        list_users.pack(fill=tk.BOTH, expand=True)
+        scrollbar.config(command=list_users.yview)
+        
+        users = self.ctrls['auth'].get_users()
+        user_map = {u.login: u for u in users}
+        for u in users:
+            list_users.insert(tk.END, u.login)
+            
+        f_right = tk.Frame(paned)
+        paned.add(f_right, weight=3)
+        
+        self.lbl_selected_user = tk.Label(f_right, text="No user selected", font=("Segoe UI", 12, "bold"))
+        self.lbl_selected_user.pack(pady=10)
+        
+        cols = ("Asset", "Quantity", "Value ($)")
+        tree_admin = ttk.Treeview(f_right, columns=cols, show="headings", height=8)
+        for c in cols: tree_admin.heading(c, text=c)
+        tree_admin.pack(fill=tk.BOTH, expand=True, padx=10)
+        
+        f_controls = tk.LabelFrame(f_right, text="Modify Portfolio", padx=10, pady=10)
+        f_controls.pack(fill=tk.X, padx=10, pady=10)
+        
+        tk.Label(f_controls, text="Asset:").pack(side=tk.LEFT, padx=5)
+        market_data = self.ctrls['dash'].getMarketData()
+        assets_list = [m['ticker'] for m in market_data]
+        asset_id_map = {m['ticker']: m['id'] for m in market_data}
+        
+        cb_asset_adm = ttk.Combobox(f_controls, values=assets_list, state="readonly", width=10)
+        cb_asset_adm.pack(side=tk.LEFT, padx=5)
+        if assets_list: cb_asset_adm.current(0)
+        
+        tk.Label(f_controls, text="Qty:").pack(side=tk.LEFT, padx=5)
+        e_qty_adm = ttk.Entry(f_controls, width=10)
+        e_qty_adm.pack(side=tk.LEFT, padx=5)
+        
+        self.selected_user_id = None
+        
+        def refresh_admin_view():
+            for i in tree_admin.get_children(): tree_admin.delete(i)
+            if not self.selected_user_id: return
+            
+            pf = self.ctrls['dash'].getPortfolioSummary(self.selected_user_id)
+            if pf:
+                for item in pf:
+                    tree_admin.insert("", tk.END, values=(item['ticker'], item['qty'], f"{item['value']:.2f}"))
+            else:
+                tree_admin.insert("", tk.END, values=("Empty", "-", "-"))
+
+        def on_user_select(evt):
+            sel = list_users.curselection()
+            if not sel: return
+            login = list_users.get(sel[0])
+            user = user_map.get(login)
+            if user:
+                self.selected_user_id = user.user_id
+                self.lbl_selected_user.config(text=f"Managing: {user.login} ({user.role})")
+                refresh_admin_view()
+        
+        list_users.bind("<<ListboxSelect>>", on_user_select)
+        
+        def admin_trade(action):
+            if not self.selected_user_id:
+                messagebox.showwarning("Warning", "Select a user first.")
+                return
+            
+            try:
+                qty = float(e_qty_adm.get())
+                ticker = cb_asset_adm.get()
+                asset_id = asset_id_map.get(ticker)
+                
+                if action == "buy":
+                    self.ctrls['port'].buyAsset(asset_id, qty, self.selected_user_id)
+                else:
+                    self.ctrls['port'].sellAsset(asset_id, qty, self.selected_user_id)
+                
+                refresh_admin_view()
+                messagebox.showinfo("Success", f"{action.upper()} executed for user.")
+                
+            except ValueError:
+                messagebox.showerror("Error", "Invalid quantity.")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+        tk.Button(f_controls, text="Credit Asset (Buy)", bg="#2ecc71", fg="white", 
+                  command=lambda: admin_trade("buy")).pack(side=tk.LEFT, padx=10)
+        tk.Button(f_controls, text="Debit Asset (Sell)", bg="#e74c3c", fg="white", 
+                  command=lambda: admin_trade("sell")).pack(side=tk.LEFT, padx=10)
+
     def create_dashboard(self):
         tab = tk.Frame(self.nb)
         self.nb.add(tab, text="Dashboard")
@@ -383,15 +485,12 @@ class MainWindow(tk.Tk):
         tab = tk.Frame(self.nb)
         self.nb.add(tab, text="AutoTrading")
         
-        # --- Верхняя секция: Форма создания бота ---
         f_top = tk.Frame(tab)
         f_top.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
 
         f_form = tk.LabelFrame(f_top, text="Create New Trading Bot", padx=15, pady=15, font=("Segoe UI", 10, "bold"))
         f_form.pack(fill=tk.BOTH, expand=True)
         
-        # Используем Grid для аккуратного расположения полей ввода
-        # Ряд 1: Название и Стратегия
         tk.Label(f_form, text="Bot Name:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
         e_name = ttk.Entry(f_form, width=25)
         e_name.grid(row=0, column=1, sticky="w", padx=5, pady=5)
@@ -402,9 +501,7 @@ class MainWindow(tk.Tk):
         c_strat.grid(row=0, column=3, sticky="w", padx=5, pady=5)
         if strategies: c_strat.current(0)
 
-        # Ряд 2: Актив и Максимальная позиция
         tk.Label(f_form, text="Target Asset:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
-        # Получаем список тикеров из контроллера дашборда
         market_data = self.ctrls['dash'].getMarketData()
         assets_list = [m['ticker'] for m in market_data]
         c_asset = ttk.Combobox(f_form, values=assets_list, state="readonly", width=23)
@@ -415,7 +512,6 @@ class MainWindow(tk.Tk):
         e_max = ttk.Entry(f_form, width=25)
         e_max.grid(row=1, column=3, sticky="w", padx=5, pady=5)
 
-        # Ряд 3: Риск-менеджмент
         tk.Label(f_form, text="Stop Loss (%):").grid(row=2, column=0, sticky="w", padx=5, pady=5)
         e_sl = ttk.Entry(f_form, width=25)
         e_sl.grid(row=2, column=1, sticky="w", padx=5, pady=5)
@@ -424,7 +520,6 @@ class MainWindow(tk.Tk):
         e_tp = ttk.Entry(f_form, width=25)
         e_tp.grid(row=2, column=3, sticky="w", padx=5, pady=5)
 
-        # --- Нижняя секция: Список ботов ---
         f_bot = tk.Frame(tab)
         f_bot.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, padx=10, pady=10)
         
@@ -434,7 +529,6 @@ class MainWindow(tk.Tk):
         cols = ("Name", "Strategy", "Asset", "SL (%)", "TP (%)", "Max Pos ($)")
         tree = ttk.Treeview(f_bot, columns=cols, show="headings", height=8)
         
-        # Настройка столбцов
         tree.heading("Name", text="Name")
         tree.column("Name", width=120)
         tree.heading("Strategy", text="Strategy")
@@ -450,14 +544,12 @@ class MainWindow(tk.Tk):
         
         tree.pack(fill=tk.BOTH, expand=True)
 
-        # Функция обновления списка
         def refresh_bots():
             for i in tree.get_children(): tree.delete(i)
             bots = self.ctrls['bot'].getUserBots(self.current_user.user_id)
             for b in bots:
                 tree.insert("", tk.END, values=(b.name, b.strategy, b.assets, b.stop_loss, b.take_profit, b.max_pos))
 
-        # Функция создания бота
         def add_bot():
             try:
                 name = e_name.get()
@@ -475,7 +567,6 @@ class MainWindow(tk.Tk):
                 refresh_bots()
                 messagebox.showinfo("Success", f"Bot '{name}' successfully deployed!")
                 
-                # Очистка полей
                 e_name.delete(0, tk.END)
                 e_sl.delete(0, tk.END)
                 e_tp.delete(0, tk.END)
@@ -484,9 +575,7 @@ class MainWindow(tk.Tk):
             except ValueError:
                 messagebox.showerror("Error", "SL, TP and Max Position must be numeric values")
 
-        # Кнопка деплоя (в форме ввода)
         btn_deploy = ttk.Button(f_form, text="Deploy Bot", command=add_bot)
         btn_deploy.grid(row=3, column=0, columnspan=4, pady=15, sticky="ew")
 
-        # Инициализация списка при загрузке вкладки
         refresh_bots()

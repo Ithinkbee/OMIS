@@ -255,6 +255,11 @@ class UserRepository(Repository):
     
     def register_user(self, user):
         self.saveObject(user)
+    
+    def get_all_users(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT user_id, login, password, role FROM users")
+        return [User(*r) for r in cursor.fetchall()]
 
     def saveObject(self, user) -> None:
         cursor = self.conn.cursor()
