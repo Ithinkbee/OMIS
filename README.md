@@ -1,5 +1,3 @@
-### (скриншоты скоро будут)
-
 # Финансовая Аналитическая Платформа
 
 ## Описание проекта
@@ -76,3 +74,31 @@
 - `control.py` — Бизнес-логика (Контроллеры авторизации, торговли, анализа).
 - `representation.py` — Графический интерфейс (Окна, виджеты, обработка событий).
 - `infrastructure.py` — DI-контейнер и фабрики для связывания компонентов.
+
+---
+
+## Скриншоты
+
+### Главная страница:
+<img width="1912" height="692" alt="image" src="https://github.com/user-attachments/assets/357e9a86-5896-43af-ae8b-4e86e862a361" />
+
+### Прогнозирование:
+<img width="1280" height="462" alt="image" src="https://github.com/user-attachments/assets/5ed21466-960c-4d9a-9dab-11c82de269e3" />
+
+### Вывод отчётов:
+<img width="1919" height="712" alt="image" src="https://github.com/user-attachments/assets/48140103-fdff-4e48-aed9-25f993edae3b" />
+
+### Создание ботов для автоматической торговли:
+<img width="1919" height="603" alt="image" src="https://github.com/user-attachments/assets/b860dce2-92e3-4417-9139-0e34b18724f3" />
+
+### Окно настроек администратора:
+<img width="1919" height="1108" alt="image" src="https://github.com/user-attachments/assets/8b9b795c-29af-4c31-adc2-634d0d7aab9c" />
+
+### Окно входа/регистрации
+<img width="491" height="471" alt="image" src="https://github.com/user-attachments/assets/0f2df66f-7550-46d3-b39f-96b050f51260" />
+
+---
+
+## Автор
+
+- **Ithinkbee**
